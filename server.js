@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const cron = require('node-cron');
+// cron removed - manual sync only
 const fs = require('fs');
 const path = require('path');
 const { PlaidApi, PlaidEnvironments, Configuration, Products, CountryCode } = require('plaid');
@@ -175,17 +175,7 @@ app.get('/api/banks', (req, res) => {
   res.json({ banks: appData.accessTokens.map(t => ({ institution: t.institution, itemId: t.itemId })) });
 });
 
-// ── Auto-sync every 6 hours ───────────────────────────────
-cron.schedule('0 */6 * * *', async () => {
-  if (!appData.accessTokens.length) return;
-  console.log('⏰ Auto-sync transactions...');
-  try {
-    const txs = await fetchPlaidTransactions(7);
-    const existingIds = new Set(appData.expenses.map(e => e.bankTxId).filter(Boolean));
-    let added = 0;
-    txs.forEach(tx => {
-      if (tx.pending || existingIds.has(tx.id)) return;
-      appData.expenses.push({ id: Date.now() + Math.random() + added, who: 'Auto', desc: tx.desc, amount: tx.amount, cat: tx.cat, date: new Date(tx.date).toISOString(), month: tx.month, bankTxId: tx.id, institution: tx.institution, source: 'bank' });
+// Auto-sync disabled — manual sync only to control Plaid costs
       added++;
     });
     if (added) { appData.lastSync = new Date().toISOString(); writeData(appData); }
