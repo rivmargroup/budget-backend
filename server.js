@@ -1,7 +1,6 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-// cron removed - manual sync only
 const fs = require('fs');
 const path = require('path');
 const { PlaidApi, PlaidEnvironments, Configuration, Products, CountryCode } = require('plaid');
@@ -10,32 +9,28 @@ const app = express();
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 
-// ── Data persistence (JSON file, works on Railway) ────────
+// ── Data persistence ──────────────────────────────────────
 const DATA_FILE = path.join(__dirname, 'data.json');
-
 function readData() {
-  try {
-    if (fs.existsSync(DATA_FILE)) return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-  } catch(e) {}
+  try { if (fs.existsSync(DATA_FILE)) return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); } catch(e) {}
   return { expenses: [], accessTokens: [], budgets: {}, lastSync: null };
 }
-
-function writeData(data) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-}
-
+function writeData(data) { fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2)); }
 let appData = readData();
 
 // ── Plaid setup ───────────────────────────────────────────
 const plaidEnv = process.env.PLAID_ENV || 'sandbox';
+let plaidSecret;
+if (plaidEnv === 'sandbox') plaidSecret = process.env.PLAID_SANDBOX_SECRET;
+else if (plaidEnv === 'development') plaidSecret = process.env.PLAID_DEVELOPMENT_SECRET;
+else plaidSecret = process.env.PLAID_PRODUCTION_SECRET;
+
 const plaidConfig = new Configuration({
   basePath: PlaidEnvironments[plaidEnv],
   baseOptions: {
     headers: {
       'PLAID-CLIENT-ID': process.env.PLAID_CLIENT_ID,
-      'PLAID-SECRET': plaidEnv === 'sandbox'
-        ? process.env.PLAID_SANDBOX_SECRET
-        : process.env.PLAID_DEVELOPMENT_SECRET,
+      'PLAID-SECRET': plaidSecret,
     },
   },
 });
@@ -57,7 +52,7 @@ app.post('/api/create_link_token', async (req, res) => {
   try {
     const r = await plaidClient.linkTokenCreate({
       user: { client_user_id: 'jorge-rivmar' },
-      client_name: 'Mi Pareja & Yo',
+      client_name: 'Mi Presupuesto',
       products: [Products.Transactions],
       country_codes: [CountryCode.Us],
       language: 'es',
@@ -83,7 +78,7 @@ app.post('/api/exchange_token', async (req, res) => {
   }
 });
 
-// ── Fetch transactions from Plaid ─────────────────────────
+// ── Fetch transactions ────────────────────────────────────
 async function fetchPlaidTransactions(daysBack = 30) {
   const end = new Date().toISOString().split('T')[0];
   const start = new Date(Date.now() - daysBack * 86400000).toISOString().split('T')[0];
@@ -124,7 +119,7 @@ app.get('/api/transactions/bank', async (req, res) => {
   }
 });
 
-// ── Expenses CRUD ─────────────────────────────────────────
+// ── Expenses ──────────────────────────────────────────────
 app.get('/api/expenses', (req, res) => {
   res.json({ expenses: appData.expenses, lastSync: appData.lastSync });
 });
@@ -170,17 +165,9 @@ app.post('/api/budgets', (req, res) => {
   res.json({ success: true, budgets: appData.budgets });
 });
 
-// ── Banks list ────────────────────────────────────────────
+// ── Banks ─────────────────────────────────────────────────
 app.get('/api/banks', (req, res) => {
   res.json({ banks: appData.accessTokens.map(t => ({ institution: t.institution, itemId: t.itemId })) });
-});
-
-// Auto-sync disabled — manual sync only to control Plaid costs
-      added++;
-    });
-    if (added) { appData.lastSync = new Date().toISOString(); writeData(appData); }
-    console.log(`✅ Auto-sync: ${added} new transactions`);
-  } catch(e) { console.error('Auto-sync error:', e.message); }
 });
 
 // ── Health ────────────────────────────────────────────────
