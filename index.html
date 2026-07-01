@@ -739,9 +739,12 @@ function renderBankScreen(){
 
 async function connectBank(){
   try {
+    showToast('🔄 Conectando con el banco...');
     const r=await fetch(`${PLAID_BACKEND}/api/create_link_token`,{method:'POST'});
-    if(!r.ok) throw new Error('Backend no disponible');
-    const {link_token}=await r.json();
+    if(!r.ok) throw new Error(`HTTP error ${r.status}`);
+    const data=await r.json();
+    if(!data.link_token) throw new Error('No link token received');
+    const link_token=data.link_token;
     const handler=Plaid.create({
       token:link_token,
       onSuccess:async(public_token,meta)=>{
@@ -760,7 +763,8 @@ async function connectBank(){
     });
     handler.open();
   } catch(e){
-    showToast('⚠️ Configura el backend primero');
+    console.error('connectBank error:', e);
+    showToast('❌ Error: ' + e.message);
   }
 }
 
