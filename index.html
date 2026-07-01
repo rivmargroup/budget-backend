@@ -474,16 +474,8 @@ const db = createClient(SUPA_URL, SUPA_KEY);
 // ═══════════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════════
-const CATS = [
-  {id:'groceries',label:'Groceries',emoji:'🛒'},
-  {id:'gasolina', label:'Gasolina', emoji:'⛽'},
-  {id:'renta',    label:'Renta/Bills',emoji:'🏠'},
-  {id:'salidas',  label:'Salidas',  emoji:'🎉'},
-  {id:'personal', label:'Personal', emoji:'👤'},
-  {id:'otro',     label:'Otro',     emoji:'📦'},
-];
-const CAT = Object.fromEntries(CATS.map(c=>[c.id,c]));
 const COLORS = ['#7c6fcd','#e8637a','#3ecf8e','#f5c842','#ff9940','#60a5fa'];
+// CATS and CAT are defined in CUSTOM CATEGORIES section below
 
 let who='Male', selCat=null, expenses=[], budgets={}, banks=[], bankTxs=[];
 let selTxIds=new Set(), viewMonth=new Date(), histFilter='all';
