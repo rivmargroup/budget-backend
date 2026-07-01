@@ -182,6 +182,32 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sa
 .loading-label{font-size:14px;color:var(--muted)}
 .empty-state{text-align:center;padding:40px 20px;color:var(--muted)}
 .empty-state .ei{font-size:44px;margin-bottom:12px}
+
+/* CUSTOM CATEGORIES */
+.cat-manage-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.cat-manage-row:last-child{border-bottom:none}
+.cat-emoji-input{width:50px;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:20px;text-align:center;outline:none}
+.cat-name-input{flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px;outline:none}
+.cat-name-input:focus,.cat-emoji-input:focus{border-color:var(--accent)}
+.cat-del-btn{background:none;border:none;color:var(--border);cursor:pointer;font-size:18px;padding:4px;transition:color .2s}
+.cat-del-btn:hover{color:var(--red)}
+.add-cat-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;border-radius:10px;border:1.5px dashed var(--accent);background:rgba(124,111,205,.06);color:var(--accent);font-size:14px;font-weight:700;cursor:pointer;margin-top:10px}
+
+/* EDIT EXPENSE MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;display:flex;align-items:flex-end;justify-content:center}
+.modal-overlay.hidden{display:none}
+.modal-box{background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto}
+.modal-title{font-size:16px;font-weight:800;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
+.modal-close{background:none;border:none;color:var(--muted);font-size:24px;cursor:pointer;line-height:1}
+.modal-cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.modal-save-btn{width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:15px;font-weight:800;cursor:pointer;margin-top:8px}
+
+/* WHO SELECTOR IN ADD FORM */
+.for-who-selector{display:flex;gap:8px;margin-bottom:4px}
+.for-who-btn{flex:1;padding:10px;border-radius:10px;border:2px solid var(--border);background:var(--surface2);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.for-who-btn.j.active{border-color:var(--accent);color:#fff;background:rgba(124,111,205,.15)}
+.for-who-btn.p.active{border-color:var(--accent2);color:#fff;background:rgba(232,99,122,.15)}
+
 </style>
 </head>
 <body>
@@ -302,6 +328,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sa
         <div class="field-label">Categoría</div>
         <div class="cat-grid" id="cat-grid"></div>
       </div>
+      <div>
+        <div class="field-label">Gasto para</div>
+        <div class="for-who-selector">
+          <button class="for-who-btn j active" id="add-for-male" onclick="setAddForWho('Male')">👨 Male</button>
+          <button class="for-who-btn p" id="add-for-female" onclick="setAddForWho('Female')">👩 Female</button>
+        </div>
+      </div>
       <button class="submit-btn" id="submit-btn" onclick="addExpense()">Guardar Gasto</button>
     </div>
   </div>
@@ -368,6 +401,37 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sa
 
 </div>
 
+
+<!-- EDIT EXPENSE MODAL -->
+<div class="modal-overlay hidden" id="edit-modal">
+  <div class="modal-box">
+    <div class="modal-title">
+      Editar gasto
+      <button class="modal-close" onclick="closeEditModal()">×</button>
+    </div>
+    <div>
+      <div class="field-label">Descripción</div>
+      <input class="field-input" id="edit-desc" type="text" maxlength="50" style="margin-top:6px">
+    </div>
+    <div style="margin-top:12px">
+      <div class="field-label">Cantidad ($)</div>
+      <input class="field-input" id="edit-amount" type="number" step="0.01" min="0" inputmode="decimal" style="margin-top:6px">
+    </div>
+    <div style="margin-top:12px">
+      <div class="field-label">Asignado a</div>
+      <div class="for-who-selector" style="margin-top:6px">
+        <button class="for-who-btn j active" id="edit-who-male" onclick="setEditWho('Male')">👨 Male</button>
+        <button class="for-who-btn p" id="edit-who-female" onclick="setEditWho('Female')">👩 Female</button>
+      </div>
+    </div>
+    <div style="margin-top:12px">
+      <div class="field-label">Categoría</div>
+      <div class="modal-cat-grid" id="modal-cat-grid"></div>
+    </div>
+    <button class="modal-save-btn" onclick="saveEditExpense()">Guardar cambios</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -402,7 +466,7 @@ function unlock() {
 // ═══════════════════════════════════════════════════════
 const SUPA_URL  = 'https://ktsekkfmducfftodbiju.supabase.co';
 const SUPA_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0c2Vra2ZtZHVjZmZ0b2RiaWp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI2MTIxNDEsImV4cCI6MjA5ODE4ODE0MX0.YE6oUSXtN4xKxpJieIswVDbyN9oS2vh47PRXPOuyyAU';
-const PLAID_BACKEND = 'https://pareja-budget.railway.app'; // Update after deploy
+const PLAID_BACKEND = 'https://npm-install-8wag.onrender.com'; // Update after deploy
 
 const { createClient } = supabase;
 const db = createClient(SUPA_URL, SUPA_KEY);
@@ -449,8 +513,10 @@ function changeMonth(dir){
 }
 function setWho(w){
   who=w;
+  addForWho=w;
   document.querySelectorAll('.who-opt').forEach(b=>b.classList.remove('active'));
-  document.querySelector(`.who-opt.${w==='Jorge'?'j':'p'}`).classList.add('active');
+  document.querySelector(`.who-opt.${w==='Male'?'j':'p'}`).classList.add('active');
+  if(document.getElementById('add-for-male')) setAddForWho(w);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -634,6 +700,7 @@ function renderCharts(month){
 // ADD EXPENSE
 // ═══════════════════════════════════════════════════════
 function buildCatGrid(){
+  refreshCats();
   document.getElementById('cat-grid').innerHTML='';
   CATS.forEach(c=>{
     const t=document.createElement('button');
@@ -653,7 +720,8 @@ async function addExpense(){
   const btn=document.getElementById('submit-btn');
   btn.disabled=true; btn.textContent='Guardando…';
   const now=new Date();
-  const exp={id:uid(),who,desc,amount,cat:selCat,date:now.toISOString(),month:monthKey(now),source:'manual'};
+  const expWho = addForWho || who;
+  const exp={id:uid(),who:expWho,desc,amount,cat:selCat,date:now.toISOString(),month:monthKey(now),source:'manual'};
   const {error}=await db.from('expenses').insert([exp]);
   if(error){ showToast('❌ Error: '+error.message); }
   else {
@@ -786,6 +854,7 @@ function renderHistory(){
       </div>
       <div class="tx-right">
         <div class="tx-amount">${fmt(e.amount)}</div>
+        <button class="tx-del" onclick="openEditModal('${e.id}')" style="color:var(--accent);font-size:14px">✏️</button>
         <button class="tx-del" onclick="deleteExpense('${e.id}')">×</button>
       </div>
     </div>`;
@@ -806,6 +875,7 @@ async function deleteExpense(id){
 // SETTINGS
 // ═══════════════════════════════════════════════════════
 function renderSettings(){
+  renderCustomCatsList();
   document.getElementById('budget-settings-list').innerHTML=CATS.map(c=>`
     <div class="budget-setting-row">
       <div class="budget-setting-icon">${c.emoji}</div>
@@ -850,6 +920,167 @@ function exportCSV(){
   a.click();
   showToast('📥 CSV descargado');
 }
+
+
+// ═══════════════════════════════════════════════════════
+// CUSTOM CATEGORIES
+// ═══════════════════════════════════════════════════════
+const DEFAULT_CATS = [
+  {id:'groceries',label:'Groceries',emoji:'🛒'},
+  {id:'gasolina', label:'Gasolina', emoji:'⛽'},
+  {id:'renta',    label:'Renta/Bills',emoji:'🏠'},
+  {id:'salidas',  label:'Salidas',  emoji:'🎉'},
+  {id:'personal', label:'Personal', emoji:'👤'},
+  {id:'otro',     label:'Otro',     emoji:'📦'},
+];
+
+function loadCats() {
+  try {
+    const saved = localStorage.getItem('custom_cats');
+    if (saved) return JSON.parse(saved);
+  } catch(e) {}
+  return DEFAULT_CATS;
+}
+
+function saveCatsLocal(cats) {
+  localStorage.setItem('custom_cats', JSON.stringify(cats));
+}
+
+// Override CATS with custom ones
+let CATS = loadCats();
+let CAT = Object.fromEntries(CATS.map(c=>[c.id,c]));
+
+function refreshCats() {
+  CATS = loadCats();
+  CAT = Object.fromEntries(CATS.map(c=>[c.id,c]));
+}
+
+function renderCustomCatsList() {
+  refreshCats();
+  const list = document.getElementById('custom-cats-list');
+  list.innerHTML = CATS.map((c,i) => `
+    <div class="cat-manage-row">
+      <input class="cat-emoji-input" id="cat-emoji-${i}" value="${c.emoji}" maxlength="2">
+      <input class="cat-name-input" id="cat-name-${i}" value="${c.label}" placeholder="Nombre categoría">
+      <button class="cat-del-btn" onclick="deleteCustomCat(${i})" ${CATS.length<=3?'disabled':''}>🗑️</button>
+    </div>`).join('');
+}
+
+function addCustomCat() {
+  refreshCats();
+  CATS.push({id:'cat_'+Date.now(),label:'Nueva',emoji:'📌'});
+  saveCatsLocal(CATS);
+  renderCustomCatsList();
+}
+
+function deleteCustomCat(idx) {
+  refreshCats();
+  if (CATS.length <= 3) return showToast('Mínimo 3 categorías');
+  CATS.splice(idx, 1);
+  saveCatsLocal(CATS);
+  renderCustomCatsList();
+  showToast('🗑️ Categoría eliminada');
+}
+
+function saveCustomCats() {
+  refreshCats();
+  const updated = CATS.map((c,i) => ({
+    id: c.id,
+    emoji: document.getElementById('cat-emoji-'+i)?.value || c.emoji,
+    label: document.getElementById('cat-name-'+i)?.value || c.label,
+  }));
+  saveCatsLocal(updated);
+  CATS = updated;
+  CAT = Object.fromEntries(CATS.map(c=>[c.id,c]));
+  buildCatGrid();
+  showToast('✅ Categorías guardadas');
+}
+
+// ═══════════════════════════════════════════════════════
+// FOR-WHO SELECTOR IN ADD FORM
+// ═══════════════════════════════════════════════════════
+let addForWho = who; // defaults to logged in user
+
+function setAddForWho(w) {
+  addForWho = w;
+  document.querySelectorAll('.for-who-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('add-for-male').classList.toggle('active', w==='Male');
+  document.getElementById('add-for-female').classList.toggle('active', w==='Female');
+}
+
+// ═══════════════════════════════════════════════════════
+// EDIT EXPENSE MODAL
+// ═══════════════════════════════════════════════════════
+let editingExpense = null;
+let editSelCat = null;
+let editWho = 'Male';
+
+function openEditModal(id) {
+  const exp = expenses.find(e=>String(e.id)===String(id));
+  if (!exp) return;
+  editingExpense = exp;
+  editSelCat = exp.cat;
+  editWho = exp.who || 'Male';
+  document.getElementById('edit-desc').value = exp.desc || '';
+  document.getElementById('edit-amount').value = exp.amount || '';
+  setEditWho(editWho);
+  buildModalCatGrid();
+  document.getElementById('edit-modal').classList.remove('hidden');
+}
+
+function closeEditModal() {
+  document.getElementById('edit-modal').classList.add('hidden');
+  editingExpense = null;
+}
+
+function setEditWho(w) {
+  editWho = w;
+  document.getElementById('edit-who-male').classList.toggle('active', w==='Male');
+  document.getElementById('edit-who-female').classList.toggle('active', w==='Female');
+}
+
+function buildModalCatGrid() {
+  refreshCats();
+  const grid = document.getElementById('modal-cat-grid');
+  grid.innerHTML = '';
+  CATS.forEach(c => {
+    const t = document.createElement('button');
+    t.className = 'cat-tile'+(editSelCat===c.id?' active':'');
+    t.innerHTML = `<span class="ti">${c.emoji}</span><span class="tn">${c.label}</span>`;
+    t.onclick = () => { editSelCat=c.id; buildModalCatGrid(); };
+    grid.appendChild(t);
+  });
+}
+
+async function saveEditExpense() {
+  if (!editingExpense) return;
+  const desc = document.getElementById('edit-desc').value.trim();
+  const amount = parseFloat(document.getElementById('edit-amount').value);
+  if (!desc) return showToast('Escribe una descripción');
+  if (!amount||amount<=0) return showToast('Cantidad inválida');
+  if (!editSelCat) return showToast('Selecciona categoría');
+
+  const updated = {...editingExpense, desc, amount, cat:editSelCat, who:editWho};
+  
+  // Delete old and insert updated
+  const {error:delErr} = await db.from('expenses').delete().eq('id', editingExpense.id);
+  if (delErr) return showToast('❌ Error al actualizar');
+  const {error:insErr} = await db.from('expenses').insert([updated]);
+  if (insErr) return showToast('❌ Error al guardar');
+  
+  // Update local
+  const idx = expenses.findIndex(e=>String(e.id)===String(editingExpense.id));
+  if (idx>=0) expenses[idx] = updated;
+  
+  closeEditModal();
+  renderCurrentScreen();
+  showToast('✅ Gasto actualizado');
+}
+
+// Close modal on overlay click
+document.getElementById('edit-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeEditModal();
+});
 
 // ═══════════════════════════════════════════════════════
 // INIT
